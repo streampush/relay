@@ -1,0 +1,18 @@
+{
+    "id": "145ddbd8-97fa-4e7f-acc7-c5211d6fcde0",
+    "name": "Restream 1",
+    "endpoints": {
+        "451e4604-246e-4790-9cf9-18312aaaefd0": {
+            "name": "YouTube",
+            "url": "rtmp URL"
+        },
+        "7da3748a-c649-4b42-93cc-5369d19508f4": {
+            "name": "Facebook",
+            "url": "rtmp URL"
+        },
+        "1afb00ae-0743-42fb-88cd-942575082edb": {
+            "name": "Twitch.tv",
+            "url": "rtmp URL"
+        }
+    }
+}
