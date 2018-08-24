@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -186,6 +188,10 @@ func main() {
 			avutil.CopyPackets(restream.Queue, demuxer)
 
 			// Origin stopped sending data
+			http.PostForm(NOTIFY_URL, url.Values{
+				"app":  {restream.ID},
+				"call": {"publish_done"},
+			})
 			restream.Channel <- "publish_done"
 		}()
 
@@ -215,6 +221,10 @@ func main() {
 		}
 
 		restream.Streaming = true
+		http.PostForm(NOTIFY_URL, url.Values{
+			"app":  {restream.ID},
+			"call": {"publish"},
+		})
 	}
 
 	log.Println("Starting server")
