@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/nareix/joy4/av/pktque"
+
 	"github.com/nareix/joy4/av/avutil"
 	"github.com/nareix/joy4/av/pubsub"
 	"github.com/nareix/joy4/format/rtmp"
@@ -16,20 +18,18 @@ import (
 	"github.com/abiosoft/ishell"
 )
 
-const _CfgPort = "1935"
-
 var restreams = struct {
 	sync.RWMutex
 	cfgs map[string]*Restream
 }{cfgs: make(map[string]*Restream)}
 
-func reloadConfigs() {
+func reloadConfigs() int {
 	log.Println("Reloading restream configs")
 
 	files, err := ioutil.ReadDir("configs")
 	if err != nil {
 		shell.Println("Error loading restream configs", err)
-		return
+		return -1
 	}
 
 	for _, file := range files {
@@ -84,14 +84,16 @@ func reloadConfigs() {
 			for oldEndpointID, oldEndpoint := range restream.Endpoints {
 				_, exists := toInsert.Endpoints[oldEndpointID]
 				if !exists {
+					// Close any endpoints that might be streaming
 					oldEndpoint.Dest.Close()
 					delete(restream.Endpoints, oldEndpointID)
 					log.Printf("\t- Removed old endpoint %s", oldEndpoint.Name)
 				}
 			}
 
+			// Hot-reload endpoints
 			select {
-			case restream.Channel <- "reload": // Hot-reload endpoints
+			case restream.Channel <- "reload":
 				break
 			default:
 				break
@@ -105,6 +107,7 @@ func reloadConfigs() {
 	}
 
 	log.Printf("Loaded %d configs\n", len(restreams.cfgs))
+	return 0
 }
 
 func pushStream(restream *Restream, endpoint *Endpoint) {
@@ -144,7 +147,7 @@ func main() {
 	reloadConfigs()
 
 	server := &rtmp.Server{
-		Addr: ":" + _CfgPort,
+		Addr: RTMP_LISTEN,
 	}
 
 	server.HandlePublish = func(conn *rtmp.Conn) {
@@ -160,8 +163,9 @@ func main() {
 		restream, exists := restreams.cfgs[endpoint]
 		restreams.RUnlock()
 
+		// Don't allow unauthorized restreams
 		if !exists {
-			log.Println("Invalid stream ID; dropping connection.")
+			log.Println("Unknown stream ID; dropping connection.")
 			conn.Close()
 			return
 		}
@@ -170,8 +174,16 @@ func main() {
 		restream.Queue = pubsub.NewQueue()
 
 		go func() {
-			// Copy packets to the queue (this is blocking)
-			avutil.CopyPackets(restream.Queue, restream.Origin)
+			// Pass packets through a pseudo-filter to calculate
+			// the current inbound bitrate
+			filters := pktque.Filters{}
+			filters = append(filters, &CalcBitrate{Restream: restream})
+			demuxer := &pktque.FilterDemuxer{
+				Filter:  filters,
+				Demuxer: restream.Origin,
+			}
+
+			avutil.CopyPackets(restream.Queue, demuxer)
 
 			// Origin stopped sending data
 			restream.Channel <- "publish_done"
@@ -191,7 +203,7 @@ func main() {
 					break chanLoop
 				case "reload":
 					/* Configs have been reloaded, we need to determine if
-					 * we should spin up any new endpoints. EndpointsS that
+					 * we should spin up any new endpoints. Endpoints that
 					 * were removed will kill themselves. */
 					break
 				}
@@ -277,7 +289,8 @@ func main() {
 		},
 	})
 
-	shell.AddCmd(restreamCmdGroup)
+	go StartAPIServer()
 
+	shell.AddCmd(restreamCmdGroup)
 	shell.Run()
 }
