@@ -289,8 +289,8 @@ func main() {
 		},
 	})
 
-	go StartAPIServer()
-
 	shell.AddCmd(restreamCmdGroup)
-	shell.Run()
+	go shell.Run()
+
+	StartAPIServer()
 }
