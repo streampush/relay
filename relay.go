@@ -9,12 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nareix/joy4/av/pubsub"
-
 	"github.com/nareix/joy4/av/avutil"
-
-	// "github.com/nareix/joy4/avutil"
-	// "github.com/nareix/joy4/format"
+	"github.com/nareix/joy4/av/pubsub"
 	"github.com/nareix/joy4/format/rtmp"
 
 	"github.com/abiosoft/ishell"
@@ -69,14 +65,14 @@ func reloadConfigs() {
 					log.Printf("\t^ Updating endpoint: %s\n", oldEndpoint.Name)
 					oldEndpoint.Update(*newEndpoint)
 
-					// TODO: Should check if URL changed here; if it did
-					// restart endpoint stream. If not, do nothing.
+					/* TODO: Should check if URL changed here; if it did
+					 * restart endpoint stream. If not, do nothing. */
 				} else { // Insert the new endpoint
 					log.Printf("\t+ Adding endpoint: %s\n", newEndpoint.Name)
 					restream.Endpoints[newEndpointID] = newEndpoint
 
-					// If this endpoint is currently live, make sure we
-					// push to our new endpoints
+					/* If this endpoint is currently live, make sure we
+					 * push to our new endpoints */
 					if restream.Streaming {
 						go pushStream(restream, newEndpoint)
 					}
@@ -138,23 +134,6 @@ func pushStream(restream *Restream, endpoint *Endpoint) {
 	}()
 
 	log.Printf("Pushing to %s", endpoint.Name)
-
-	// waitChan:
-	// 	for {
-	// 		switch <-restream.Channel {
-	// 		case "quit":
-	// 			shell.Println("Stopping push to", endpoint.Name)
-	// 			dest.Close()
-	// 			break waitChan
-	// 		case "reload":
-	// 			// TODO: If a endpoint has not changed, do nothing
-	// 			// if an endpoint has been removed, stop streaming
-	// 			fmt.Println("Endpoints", restream.Endpoints)
-	// 			break
-	// 		default:
-	// 			shell.Println("Invalid message")
-	// 		}
-	// 	}
 }
 
 var shell *ishell.Shell
@@ -211,9 +190,9 @@ func main() {
 					restream.Streaming = false
 					break chanLoop
 				case "reload":
-					// Configs have been reloaded, we need to determine if
-					// we should spin up any new endpoints. EndpointsS that
-					// were removed will kill themselves.
+					/* Configs have been reloaded, we need to determine if
+					 * we should spin up any new endpoints. EndpointsS that
+					 * were removed will kill themselves. */
 					break
 				}
 			}
