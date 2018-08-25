@@ -301,6 +301,7 @@ func main() {
 
 	shell.AddCmd(restreamCmdGroup)
 	go shell.Run()
+	go NotifyConnect()
 
 	StartAPIServer()
 }
