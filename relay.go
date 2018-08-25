@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -116,7 +117,8 @@ func pushStream(restream *Restream, endpoint *Endpoint) {
 	// Open connection to destination
 	dest, err := rtmp.Dial(endpoint.URL)
 	if err != nil {
-		shell.Println("Error restreaming", err)
+		endpoint.ConnErr = err
+		restream.AddEvent("danger", fmt.Sprintf("Endpoint '%s' did not connect: %s.", endpoint.Name, err.Error()))
 		return
 	}
 
@@ -133,12 +135,15 @@ func pushStream(restream *Restream, endpoint *Endpoint) {
 		err := avutil.CopyPackets(dest, restream.Queue.Latest())
 		if err != nil {
 			endpoint.ConnErr = err
+			restream.AddEvent("danger", fmt.Sprintf("Endpoint '%s' experienced a connection error: %s.", endpoint.Name, err.Error()))
 		}
+
 		dest.WriteTrailer()
 		endpoint.Connected = false
+		restream.AddEvent("warning", fmt.Sprintf("Endpoint '%s' disconnected.", endpoint.Name))
 	}()
 
-	log.Printf("Pushing to %s", endpoint.Name)
+	restream.AddEvent("success", fmt.Sprintf("Endpoint '%s' connected.", endpoint.Name))
 }
 
 var shell *ishell.Shell
@@ -206,6 +211,7 @@ func main() {
 					restream.Origin.Close()
 					restream.Queue.Close()
 					restream.Streaming = false
+					restream.AddEvent("success", "Restream finished.")
 					break chanLoop
 				case "reload":
 					/* Configs have been reloaded, we need to determine if
@@ -221,6 +227,8 @@ func main() {
 		}
 
 		restream.Streaming = true
+		restream.Events = make([]EventMsg, 0)
+		restream.AddEvent("success", "Restream started; inbound data is being received.")
 		http.PostForm(NOTIFY_URL, url.Values{
 			"app":  {restream.ID},
 			"call": {"publish"},
@@ -300,14 +308,6 @@ func main() {
 	})
 
 	shell.AddCmd(restreamCmdGroup)
-
-	shell.AddCmd(&ishell.Cmd{
-		Name: "wsconn",
-		Help: "notify ws connect",
-		Func: func(c *ishell.Context) {
-			NotifyConnect()
-		},
-	})
 
 	go shell.Run()
 

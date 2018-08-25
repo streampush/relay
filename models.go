@@ -1,6 +1,9 @@
 package main
 
 import (
+	"log"
+	"time"
+
 	"github.com/nareix/joy4/av/pubsub"
 	"github.com/nareix/joy4/format/rtmp"
 )
@@ -10,6 +13,12 @@ type ConnStats struct {
 	RxBytes uint64 `json:"rxBytes"`
 
 	Bitrate float64 `json:"bitrate"`
+}
+
+type EventMsg struct {
+	Level     string `json:"level"`
+	Message   string `json:"msg"`
+	Timestamp int64  `json:"time"`
 }
 
 type Endpoint struct {
@@ -36,4 +45,14 @@ type Restream struct {
 	Queue     *pubsub.Queue        `json:"-"`
 	Streaming bool                 `json:"streaming"`
 	Stats     ConnStats            `json:"stats"`
+	Events    []EventMsg           `json:"events"`
+}
+
+func (self *Restream) AddEvent(level, message string) {
+	log.Printf("%s][%s] %s", self.Name, level, message)
+	self.Events = append(self.Events, EventMsg{
+		Level:     level,
+		Message:   message,
+		Timestamp: time.Now().UnixNano(),
+	})
 }
