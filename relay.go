@@ -300,8 +300,16 @@ func main() {
 	})
 
 	shell.AddCmd(restreamCmdGroup)
+
+	shell.AddCmd(&ishell.Cmd{
+		Name: "wsconn",
+		Help: "notify ws connect",
+		Func: func(c *ishell.Context) {
+			NotifyConnect()
+		},
+	})
+
 	go shell.Run()
-	go NotifyConnect()
 
 	StartAPIServer()
 }
