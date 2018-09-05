@@ -88,7 +88,9 @@ func reloadConfigs() int {
 				_, exists := toInsert.Endpoints[oldEndpointID]
 				if !exists {
 					// Close any endpoints that might be streaming
-					oldEndpoint.Dest.Close()
+					if oldEndpoint.Dest != nil {
+						oldEndpoint.Dest.Close()
+					}
 					delete(restream.Endpoints, oldEndpointID)
 					log.Printf("\t- Removed old endpoint %s", oldEndpoint.Name)
 				}

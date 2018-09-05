@@ -22,7 +22,7 @@ func (self *CalcBitrate) ModifyPacket(pkt *av.Packet, streams []av.CodecData, vi
 	// Sample abt. every half second
 	if self.lastTime+(5e8) < time.Now().UnixNano() {
 		timeDelta := ((float64(time.Now().UnixNano()) - float64(self.lastTime)) * 1e-9)
-		self.Bitrate = float64(self.bitCnt/100) / timeDelta
+		self.Bitrate = float64(self.bitCnt/1000) / timeDelta
 
 		if self.Restream != nil {
 			self.Restream.Stats.Bitrate = self.Bitrate
